@@ -11,7 +11,7 @@ public class CarNavigation {
 		window.setResizable(false);
 		window.setTitle("Car Navigation w/ Vector Search");
 
-		NavPanel panel = new NavPanel();
+		NavPanel panel = new NavPanel(1024,1024);
 		window.add(panel);
 		window.pack();
 		window.setVisible(true);
