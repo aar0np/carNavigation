@@ -4,19 +4,24 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.imageio.ImageIO;
+
+import com.datastax.astra.client.model.Document;
 
 public class Car {
 
 	private BufferedImage up1, down1, left1, right1;
-
 	private Color finishColor;
 	
 	private String direction;
 	private String name;
 	private String color;
 	
+	private boolean atFinish;
+
 	private int speed;
 	private int tileSize;
 	private int worldCol;
@@ -27,14 +32,15 @@ public class Car {
 	private int finishRow;
 	private int finishX;
 	private int finishY;
+
+	private List<float[]> navigationVectors;
+	private NavServices navSvc;
 	
-	private boolean atFinish;
-	
-	public Car(int tileSize, String color, int startLocationIndex) { 
-		this(tileSize, color, startLocationIndex, 4);
+	public Car(NavServices svc, int tileSize, String color, int startLocationIndex) { 
+		this(svc, tileSize, color, startLocationIndex, 4);
 	}
 
-	public Car(int tileSize, String color, int startLocationIndex, int speed) { 
+	public Car(NavServices svc, int tileSize, String color, int startLocationIndex, int speed) { 
 
 		this.tileSize = tileSize;
 		this.name = color;
@@ -64,6 +70,7 @@ public class Car {
 		finishY = finishRow * tileSize;
 		atFinish = false;
 		
+		// define finish color
 		switch(color) {
 		case "blue":
 			finishColor = Color.BLUE;
@@ -94,6 +101,9 @@ public class Car {
 		}
 		
 		setupCarImages();
+		
+		navSvc = svc;
+		navigationVectors = computeNavigation();
 	}
 	
 	public void update() {
@@ -155,6 +165,21 @@ public class Car {
 		}
 		
 		return image;
+	}
+	
+	private List<float[]> computeNavigation() {
+		
+		List<float[]> returnVal = new ArrayList<float[]>();
+		
+		// initial search vector
+		float[] searchVector = {startCol, startRow, finishCol, finishRow};
+		
+		// initiate vector search
+		List<Document> streets = navSvc.vectorSearch(searchVector);
+		
+		// process streets into returnVal;
+		
+		return returnVal;
 	}
 	
 	public String getDirection() {
