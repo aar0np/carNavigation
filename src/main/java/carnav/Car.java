@@ -34,8 +34,12 @@ public class Car {
 		
 		if (startLocationIndex % 2 == 0) {
 			direction = "left";
+			startCol = 31;
+			endCol = 0;
 		} else {
 			direction = "right";
+			startCol = 0;
+			endCol = 31;
 		}
 		
 		setupCarImages();
