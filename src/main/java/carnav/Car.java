@@ -52,6 +52,7 @@ public class Car {
 	
 	public void draw(Graphics2D g2) {
 		
+		
 	}
 	
 	private void setupCarImages() {

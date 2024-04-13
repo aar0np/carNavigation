@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +64,7 @@ public class NavPanel extends JPanel implements Runnable {
 		Map<Integer,String> carColors = generateCarColors();
 		
 		// generate cars
+		carList = new ArrayList<Car>();
 		Random random = new Random();
 		
 		for (int carIndex = 0; carIndex < numberOfCars; carIndex++) {
@@ -111,6 +112,11 @@ public class NavPanel extends JPanel implements Runnable {
 		
 		// draw map
 		tileManager.draw(g2);
+		
+		// draw cars and ending points
+		for (Car car : carList) {
+			
+		}
 		
 		g2.dispose();
 	}
