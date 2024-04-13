@@ -1,5 +1,6 @@
 package carnav;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -8,18 +9,26 @@ import javax.imageio.ImageIO;
 
 public class Car {
 
+	private BufferedImage up1, down1, left1, right1;
+
+	private Color finishColor;
+	
 	private String direction;
 	private String name;
 	private String color;
-	private BufferedImage up1, down1, left1, right1;
+	
 	private int speed;
 	private int tileSize;
 	private int worldCol;
 	private int worldRow;
 	private int startCol;
 	private int startRow;
-	private int endCol;
-	private int endRow;
+	private int finishCol;
+	private int finishRow;
+	private int finishX;
+	private int finishY;
+	
+	private boolean atFinish;
 	
 	public Car(int tileSize, String color, int startLocationIndex) { 
 		this(tileSize, color, startLocationIndex, 4);
@@ -35,15 +44,56 @@ public class Car {
 		if (startLocationIndex % 2 == 0) {
 			direction = "left";
 			startCol = 31;
-			endCol = 0;
+			finishCol = 0;
 		} else {
 			direction = "right";
 			startCol = 0;
-			endCol = 31;
+			finishCol = 31;
+		}
+		
+		startRow = (startLocationIndex * 4) + 2;
+		finishRow = ((7 - startLocationIndex) * 4) + 4;
+		
+		if (finishRow >= 30) {
+			finishRow = 2;
+		}
+		
+		worldCol = startCol;
+		worldRow = startRow;
+		finishX = finishCol * tileSize;
+		finishY = finishRow * tileSize;
+		atFinish = false;
+		
+		switch(color) {
+		case "blue":
+			finishColor = Color.BLUE;
+			break;
+		case "gray":
+			finishColor = Color.GRAY;
+			break;
+		case "green":
+			finishColor = Color.GREEN;
+			break;
+		case "orange":
+			finishColor = Color.ORANGE;
+			break;
+		case "purple":
+			finishColor = new Color(128, 0, 128);
+			break;
+		case "red":
+			finishColor = Color.RED;
+			break;
+		case "white":
+			finishColor = Color.WHITE;
+			break;
+		case "yellow":
+			finishColor = Color.YELLOW;
+			break;
+		default:
+			finishColor = Color.DARK_GRAY;
 		}
 		
 		setupCarImages();
-		
 	}
 	
 	public void update() {
@@ -52,7 +102,37 @@ public class Car {
 	
 	public void draw(Graphics2D g2) {
 		
+		BufferedImage image = null;
 		
+		switch(direction) {
+		case "up":
+			image = up1;
+			break;
+			
+		case "down":
+			image = down1;
+			break;
+			
+		case "left":
+			image = left1;
+			break;
+			
+		case "right":
+			image = right1;
+			break;
+		}
+		
+		// convert grid squares to screen X,Y
+		int screenX = worldCol * tileSize;
+		int screenY = worldRow * tileSize;
+		
+		g2.drawImage(image, screenX, screenY, null);
+		
+		// finish square
+		if (!atFinish) {
+			g2.setColor(finishColor);
+			g2.fillRect(finishX, finishY,tileSize,tileSize);
+		}
 	}
 	
 	private void setupCarImages() {
@@ -165,19 +245,19 @@ public class Car {
 		this.startRow = startRow;
 	}
 
-	public int getEndCol() {
-		return endCol;
+	public int getFinishCol() {
+		return finishCol;
 	}
 
-	public void setEndCol(int endCol) {
-		this.endCol = endCol;
+	public void setFinishCol(int finishRow) {
+		this.finishCol = finishRow;
 	}
 
-	public int getEndRow() {
-		return endRow;
+	public int getFinishRow() {
+		return finishRow;
 	}
 
-	public void setEndRow(int endRow) {
-		this.endRow = endRow;
+	public void setFinishRow(int finishRow) {
+		this.finishRow = finishRow;
 	}
 }

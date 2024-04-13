@@ -70,11 +70,16 @@ public class NavPanel extends JPanel implements Runnable {
 		for (int carIndex = 0; carIndex < numberOfCars; carIndex++) {
 
 			int colorIndex = random.nextInt(8);
-			Car newCar = new Car(tileSize, carColors.get(colorIndex), colorIndex);
+			
+			while (carColors.get(colorIndex) == null) {
+				colorIndex = random.nextInt(8);
+			}
+			
+			Car newCar = new Car(tileSize, carColors.get(colorIndex), carIndex);
 			carList.add(newCar);
 			
 			// remove from car Colors, so no two cars have the same color.
-			carColors.remove(carIndex);
+			carColors.remove(colorIndex);
 		}
 		
 		panelThread = Thread.ofVirtual()
@@ -113,9 +118,9 @@ public class NavPanel extends JPanel implements Runnable {
 		// draw map
 		tileManager.draw(g2);
 		
-		// draw cars and ending points
+		// draw cars
 		for (Car car : carList) {
-			
+			car.draw(g2);
 		}
 		
 		g2.dispose();
