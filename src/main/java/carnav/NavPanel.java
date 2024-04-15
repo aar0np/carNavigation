@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +16,7 @@ public class NavPanel extends JPanel implements Runnable {
 
 	private static final long serialVersionUID = -830441278268006190L;
 	
+	// constants
 	final int originalTileSize = 16;
 	final int scale = 2;
 	final int numberOfCars = 1;
@@ -25,15 +26,19 @@ public class NavPanel extends JPanel implements Runnable {
 	private final int fPS = 60; // frames per second
 	
 	// world map settings
+	private String mapName;
 	private final int maxWorldCol = 32;
 	private final int maxWorldRow = 32;
 	
 	private int panelHeight;
 	private int panelWidth;
+	
 	private Thread panelThread;
 	private TileManager tileManager;
 	
 	private List<Car> carList;
+	
+	private NavServices navSvc;
 	
 	public NavPanel() {
 		this(1024,1024);
@@ -43,9 +48,10 @@ public class NavPanel extends JPanel implements Runnable {
 	
 	public NavPanel(int width, int height) {
 		panelWidth = width;
-		panelHeight = height; 
+		panelHeight = height;
+		mapName = "city_map_1";
 		
-		tileManager = new TileManager(tileSize, maxWorldCol, maxWorldRow, "city_map_1");
+		tileManager = new TileManager(tileSize, maxWorldCol, maxWorldRow, mapName);
 		
 		this.setPreferredSize(new Dimension(panelWidth, panelHeight));
 		this.setBackground(Color.black);
@@ -63,17 +69,26 @@ public class NavPanel extends JPanel implements Runnable {
 		
 		Map<Integer,String> carColors = generateCarColors();
 		
+		// instantiate navigation services and database API objects
+		navSvc = new NavServices(new AstraDBMethods(), mapName);
+		
 		// generate cars
+		carList = new ArrayList<Car>();
 		Random random = new Random();
 		
 		for (int carIndex = 0; carIndex < numberOfCars; carIndex++) {
 
 			int colorIndex = random.nextInt(8);
-			Car newCar = new Car(tileSize, carColors.get(colorIndex), colorIndex);
+			
+			while (carColors.get(colorIndex) == null) {
+				colorIndex = random.nextInt(8);
+			}
+			
+			Car newCar = new Car(navSvc, tileSize, carColors.get(colorIndex), carIndex);
 			carList.add(newCar);
 			
 			// remove from car Colors, so no two cars have the same color.
-			carColors.remove(carIndex);
+			carColors.remove(colorIndex);
 		}
 		
 		panelThread = Thread.ofVirtual()
@@ -111,6 +126,11 @@ public class NavPanel extends JPanel implements Runnable {
 		
 		// draw map
 		tileManager.draw(g2);
+		
+		// draw cars
+		for (Car car : carList) {
+			car.draw(g2);
+		}
 		
 		g2.dispose();
 	}
