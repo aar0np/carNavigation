@@ -3,49 +3,59 @@ package carnav;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+
 import java.io.IOException;
-import java.util.ArrayList;
+
 import java.util.List;
 
 import javax.imageio.ImageIO;
 
-import com.datastax.astra.client.model.Document;
+//import com.datastax.astra.client.model.Document;
 
 public class Car {
 
+	private final static int CAR_SPEED = 1;
+	
 	private BufferedImage up1, down1, left1, right1;
 	private Color finishColor;
 	
-	private String direction;
-	private String name;
 	private String color;
+	private String direction;
+	private String map;
+	private String name;
 	
 	private boolean atFinish;
+	private boolean atStart;
 
 	private int speed;
 	private int tileSize;
 	private int worldCol;
 	private int worldRow;
+	private int screenX;
+	private int screenY;
 	private int startCol;
 	private int startRow;
 	private int finishCol;
 	private int finishRow;
 	private int finishX;
 	private int finishY;
+	
+	private final static float[] VECTOR_NOT_FOUND = {0,0,0,0};
 
 	private List<float[]> navigationVectors;
 	private NavServices navSvc;
 	
-	public Car(NavServices svc, int tileSize, String color, int startLocationIndex) { 
-		this(svc, tileSize, color, startLocationIndex, 4);
+	public Car(NavServices svc, int tileSize, String map, String color, int startLocationIndex) { 
+		this(svc, tileSize, map, color, startLocationIndex, CAR_SPEED);
 	}
 
-	public Car(NavServices svc, int tileSize, String color, int startLocationIndex, int speed) { 
+	public Car(NavServices svc, int tileSize, String map, String color, int startLocationIndex, int speed) { 
 
-		this.tileSize = tileSize;
-		this.name = color;
 		this.color = color;
+		this.map = map;
+		this.name = color;
 		this.speed = speed;
+		this.tileSize = tileSize;
 		
 		if (startLocationIndex % 2 == 0) {
 			direction = "left";
@@ -69,6 +79,11 @@ public class Car {
 		finishX = finishCol * tileSize;
 		finishY = finishRow * tileSize;
 		atFinish = false;
+		atStart = true;
+		
+		// convert grid squares to screen X,Y
+		screenX = worldCol * tileSize;
+		screenY = worldRow * tileSize;
 		
 		// define finish color
 		switch(color) {
@@ -108,6 +123,76 @@ public class Car {
 	
 	public void update() {
 		
+		if (!atStart && hasMovedToACompleteWorldSquare()) {
+			// determine next move
+			worldCol = screenX / tileSize;
+			worldRow = screenY / tileSize;
+			
+			// are we at the finish?
+			if (worldCol == finishCol && worldRow == finishRow) {
+				atFinish = true;
+			} else {
+				// are we currently on one of our vectors?
+				float[] currentVector = onValidVector();
+				if (currentVector != VECTOR_NOT_FOUND) {
+					// on a valid vector!
+					// are we at the end of the vector?
+					if (atEndOfVector(currentVector)) {
+						// remove currentVector from list
+						navigationVectors.remove(currentVector);
+						// move toward nearest vector
+						direction = getDirectionOfNearestVector();
+					} else {
+					// beginning or middle of the vector? Follow it!
+						if (currentVector[0] == currentVector[2]) {
+							// up/down
+							if (currentVector[1] > currentVector[3]) {
+								direction = "up";
+							} else {
+								direction = "down";
+							}
+							
+						} else {
+							// currentVector[1] == currentVector[3]
+							// left/right
+							if (currentVector[0] > currentVector[2]) {
+								direction = "left";
+							} else {
+								direction = "right";
+							}
+						}
+					//    just keep swimming...
+					}
+				} else {
+					// not currently on a valid vector, so 
+					// move toward nearest vector
+					direction = getDirectionOfNearestVector();
+				}
+			}
+		} else {
+			atStart = false;
+		}
+		
+		if (!atFinish) {
+			// if we're not at the finish, move forward in the current direction
+			switch(direction) {
+			case "up":
+				screenY -= speed;
+				break;
+			
+			case "down":
+				screenY += speed;
+				break;
+				
+			case "left":
+				screenX -= speed;
+				break;
+				
+			case "right":
+				screenX += speed;
+				break;
+			}
+		}
 	}
 	
 	public void draw(Graphics2D g2) {
@@ -131,10 +216,6 @@ public class Car {
 			image = right1;
 			break;
 		}
-		
-		// convert grid squares to screen X,Y
-		int screenX = worldCol * tileSize;
-		int screenY = worldRow * tileSize;
 		
 		g2.drawImage(image, screenX, screenY, null);
 		
@@ -169,17 +250,180 @@ public class Car {
 	
 	private List<float[]> computeNavigation() {
 		
-		List<float[]> returnVal = new ArrayList<float[]>();
-		
 		// initial search vector
 		float[] searchVector = {startCol, startRow, finishCol, finishRow};
 		
 		// initiate vector search
-		List<Document> streets = navSvc.vectorSearch(searchVector);
+		List<float[]> streets = navSvc.vectorSearch(map, searchVector);
 		
-		// process streets into returnVal;
+		// process streets to console;
+		if (name.equals("blue")) {
+			System.out.print(startCol + ",");
+			System.out.print(startRow + " - ");
+			System.out.print(finishCol + ",");
+			System.out.print(finishRow);
+			System.out.println();
+			
+			for (float[] street : streets) {
+				for (float point : street) {
+					System.out.printf("%1.1f,", point);
+				}
+				System.out.println();
+			}
+		}
 		
-		return returnVal;
+		return streets;
+	}
+	
+	private boolean hasMovedToACompleteWorldSquare() {
+		
+		int modX = screenX % tileSize;
+		int modY = screenY % tileSize;
+		
+		if (modX == 0 && modY == 0) {
+			//System.out.println("X=" + worldCol + " Y=" + worldRow);
+			return true;
+		} else {
+			return false;
+		}		
+	}
+	
+	private float[] onValidVector() {
+		
+		float[] found = VECTOR_NOT_FOUND;
+		
+		for (float[] vector : navigationVectors) {
+			// x1,y1 vector[0],vector[1]
+			// x2,y2 vector[2],vector[3]
+			
+			if (worldCol == vector[0] && worldCol == vector[2]) {
+				if (worldRow >= vector[1] && worldRow <= vector[3] ||
+						worldRow >= vector[3] && worldRow <= vector[1]) {
+					found = vector;
+					break;
+				}
+			} else if (worldRow == vector[1] && worldRow == vector[3]) {
+				if (worldCol >= vector[0] && worldCol <= vector[2] ||
+						worldCol >= vector[2] && worldCol <= vector[0]) {
+					found = vector;
+					break;
+				}
+			}
+		}
+		
+		return found;
+	}
+	
+	private String getDirectionOfNearestVector() {
+		
+		float[] closestEndpoint = {99,99};
+		double distance = 999;
+		
+		if (navigationVectors.size() > 0) {
+			// compute distance to each endpoint
+			for (float[] vector : navigationVectors) {
+				
+				double endpoint1Distance = Math.sqrt(Math.pow(vector[0]-worldCol, 2) + Math.pow(vector[1]-worldRow, 2));
+				double endpoint2Distance = Math.sqrt(Math.pow(vector[2]-worldCol, 2) + Math.pow(vector[3]-worldRow, 2));
+				double shortestEndpointDistance = 0;
+				float endpoint[] = new float[2];
+				
+				if (endpoint1Distance < endpoint2Distance) {
+					shortestEndpointDistance = endpoint1Distance;
+					endpoint[0] = vector[0];
+					endpoint[1] = vector[1];
+				} else {
+					shortestEndpointDistance = endpoint2Distance;
+					endpoint[0] = vector[2];
+					endpoint[1] = vector[3];
+				}
+				
+				if (shortestEndpointDistance < distance) {
+					distance = shortestEndpointDistance;
+					closestEndpoint = endpoint;
+				}
+			}
+		} else {
+			// if there are no vectors remaining, use finish endpoint
+			closestEndpoint[0] = finishCol;
+			closestEndpoint[1] = finishRow;
+		}
+		
+		float colDistance = worldCol - closestEndpoint[0];
+		float rowDistance = worldRow - closestEndpoint[1];
+		
+		if (colDistance == 0) {
+			if (rowDistance < 0) {
+				return("down");
+			} else {
+				return("up");
+			}
+		} else if (rowDistance == 0) {
+			if (colDistance < 0) {
+				return("right");
+			} else {
+				return("left");
+			}
+		} else if (Math.abs(rowDistance) < Math.abs(colDistance)) {
+			if (rowDistance < 0) {
+				return("down");
+			} else {
+				return("up");
+			}
+		} else {
+			// Math.abs(rowDistance) >= Math.abs(colDistance)
+			if (colDistance < 0) {
+				return("right");
+			} else {
+				return("left");
+			}
+		}
+	}
+	
+	private boolean atEndOfVector(float[] vector) {
+		boolean atEnd = false;
+		boolean atEndpoint = false;
+		boolean firstPair = false;
+		String direction = "";
+		
+		if (vector[0] == worldCol && vector[1] == worldRow) {
+			atEndpoint = true;
+			firstPair = true;
+		} else if (vector[2] == worldCol && vector[3] == worldRow) {
+			atEndpoint = true;
+		}
+		
+		if (atEndpoint) {
+			if (vector[1] == vector[3]) {
+				// is left/right
+				if (vector[0] - vector[2] < 0) {
+					direction = "right";
+				} else {
+					direction = "left";
+				}
+				
+				if (direction.equals("left") && firstPair) {
+					atEnd = false;
+				} else {
+					atEnd = true;
+				}
+			} else {
+				// is up/down
+				if (vector[1] - vector[3] < 0) {
+					direction = "down";
+				} else {
+					direction = "up";
+				}
+				
+				if (direction.equals("up") && firstPair) {
+					atEnd = false;
+				} else {
+					atEnd = true;
+				}
+			}
+		}
+		
+		return atEnd;
 	}
 	
 	public String getDirection() {
@@ -188,38 +432,6 @@ public class Car {
 	
 	public void setDirection(String direction) {
 		this.direction = direction;
-	}
-	
-	public BufferedImage getUp1() {
-		return up1;
-	}
-	
-	public void setUp1(BufferedImage up1) {
-		this.up1 = up1;
-	}
-	
-	public BufferedImage getDown1() {
-		return down1;
-	}
-	
-	public void setDown1(BufferedImage down1) {
-		this.down1 = down1;
-	}
-	
-	public BufferedImage getLeft1() {
-		return left1;
-	}
-	
-	public void setLeft1(BufferedImage left1) {
-		this.left1 = left1;
-	}
-	
-	public BufferedImage getRight1() {
-		return right1;
-	}
-	
-	public void setRight1(BufferedImage right1) {
-		this.right1 = right1;
 	}
 	
 	public int getWorldCol() {
@@ -248,41 +460,5 @@ public class Car {
 	
 	public int getSpeed() {
 		return speed;
-	}
-	
-	public void setSpeed(int speed) {
-		this.speed = speed;
-	}
-	
-	public int getStartCol() {
-		return startCol;
-	}
-
-	public void setStartCol(int startCol) {
-		this.startCol = startCol;
-	}
-
-	public int getStartRow() {
-		return startRow;
-	}
-
-	public void setStartRow(int startRow) {
-		this.startRow = startRow;
-	}
-
-	public int getFinishCol() {
-		return finishCol;
-	}
-
-	public void setFinishCol(int finishRow) {
-		this.finishCol = finishRow;
-	}
-
-	public int getFinishRow() {
-		return finishRow;
-	}
-
-	public void setFinishRow(int finishRow) {
-		this.finishRow = finishRow;
 	}
 }

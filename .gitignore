@@ -3,6 +3,7 @@
 .classpath*
 .project*
 .java-version
+.python-version
 
 # Compiled class file
 *.class

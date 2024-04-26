@@ -19,7 +19,6 @@ public class NavPanel extends JPanel implements Runnable {
 	// constants
 	final int originalTileSize = 16;
 	final int scale = 2;
-	final int numberOfCars = 1;
 
 	// screen settings
 	final int tileSize = originalTileSize * scale;  // 48x48 by default
@@ -36,20 +35,22 @@ public class NavPanel extends JPanel implements Runnable {
 	private Thread panelThread;
 	private TileManager tileManager;
 	
+	private int numberOfCars;
 	private List<Car> carList;
 	
 	private NavServices navSvc;
 	
 	public NavPanel() {
-		this(1024,1024);
+		this(1024,1024,1,"city_map_2");
 		// with a pixel size of 1024x1024, that makes 32x32 grid squares,
 		// where each square is 32x32
 	}
 	
-	public NavPanel(int width, int height) {
+	public NavPanel(int width, int height, int numCars, String map) {
 		panelWidth = width;
 		panelHeight = height;
-		mapName = "city_map_1";
+		numberOfCars = numCars;
+		mapName = map;
 		
 		tileManager = new TileManager(tileSize, maxWorldCol, maxWorldRow, mapName);
 		
@@ -84,7 +85,7 @@ public class NavPanel extends JPanel implements Runnable {
 				colorIndex = random.nextInt(8);
 			}
 			
-			Car newCar = new Car(navSvc, tileSize, carColors.get(colorIndex), carIndex);
+			Car newCar = new Car(navSvc, tileSize, mapName, carColors.get(colorIndex), carIndex);
 			carList.add(newCar);
 			
 			// remove from car Colors, so no two cars have the same color.
@@ -102,9 +103,6 @@ public class NavPanel extends JPanel implements Runnable {
 	
 	@Override
 	public void run() {
-		
-		double drawInterval = 1000000000/fPS;
-		double nextDrawTime = System.nanoTime() + drawInterval;
 		
 		while (panelThread.isAlive()) {
 			update();
@@ -150,6 +148,9 @@ public class NavPanel extends JPanel implements Runnable {
 	}
 	
 	private void update() {
-		
+		// move cars
+		for (Car car : carList) {
+			car.update();
+		}
 	}
 }
