@@ -4,7 +4,14 @@
 	<artifactId>carnavigation</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>carnavigation</name>
+	<packaging>jar</packaging>
 
+	<properties>
+		<java.version>21</java.version>
+		<maven.compiler.source>21</maven.compiler.source>
+	    <maven.compiler.target>21</maven.compiler.target>
+	</properties>
+  
 	<dependencies>  
 		<dependency>
 			<groupId>com.datastax.astra</groupId>
@@ -17,4 +24,36 @@
 		    <version>1.2</version>
 		</dependency>
 	</dependencies>
+	
+	<build>
+      <plugins>
+      	<plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <executions>
+            <execution>
+              <phase>package</phase>
+              <goals>
+                <goal>single</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <archive>
+              <manifest>
+                <addClasspath>true</addClasspath>
+                <mainClass>carnav.CarNavigation</mainClass>
+              </manifest>
+            </archive>
+            <descriptorRefs>
+               <descriptorRef>jar-with-dependencies</descriptorRef>
+            </descriptorRefs>
+          </configuration>
+        </plugin> 
+      </plugins>
+      <resources>
+	    <resource>
+	        <directory>res</directory>
+	    </resource>
+      </resources>
+    </build>
 </project>
