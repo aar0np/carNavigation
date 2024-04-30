@@ -53,7 +53,7 @@ public class NavPanel extends JPanel implements Runnable {
 		mapName = map;
 		
 		tileManager = new TileManager(tileSize, maxWorldCol, maxWorldRow, mapName);
-		
+				
 		this.setPreferredSize(new Dimension(panelWidth, panelHeight));
 		this.setBackground(Color.black);
 		this.setFocusable(true);
@@ -88,7 +88,7 @@ public class NavPanel extends JPanel implements Runnable {
 			Car newCar = new Car(navSvc, tileSize, mapName, carColors.get(colorIndex), carIndex);
 			carList.add(newCar);
 			
-			// remove from car Colors, so no two cars have the same color.
+			// remove from carColors, so no two cars have the same color.
 			carColors.remove(colorIndex);
 		}
 		

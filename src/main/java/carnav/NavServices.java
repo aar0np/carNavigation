@@ -51,7 +51,7 @@ public class NavServices {
 			Pair<Float,Float> vector1 = new Pair<Float,Float>(vectors[0],vectors[1]);
 			Pair<Float,Float> vector2 = new Pair<Float,Float>(vectors[2],vectors[3]);
 			
-			// is within 2? of start or end point
+			// is within 6? of start or end point
 			boolean nearStartOrEnd = false;
 			
 			double distanceStart1 = euclideanDistance(vector1,start);
@@ -104,7 +104,7 @@ public class NavServices {
 					if (returnVector[0] == oppositeVectorHorizontal1[0] && returnVector[2] == oppositeVectorHorizontal1[2] &&
 							(returnVector[1] == oppositeVectorHorizontal1[1] ||
 							returnVector[1] == oppositeVectorHorizontal2[1])) {
-						isDuplicate = false;
+						isDuplicate = true;
 						break;
 					}
 				}
@@ -116,7 +116,7 @@ public class NavServices {
 					if (returnVector[1] == oppositeVectorVertical1[1] && returnVector[3] == oppositeVectorVertical1[3] &&
 							(returnVector[0] == oppositeVectorVertical1[0] ||
 							returnVector[0] == oppositeVectorVertical2[0])) {
-						isDuplicate = false;
+						isDuplicate = true;
 						break;
 					}
 				}

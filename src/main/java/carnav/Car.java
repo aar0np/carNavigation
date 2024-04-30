@@ -26,6 +26,7 @@ public class Car {
 	
 	private boolean atFinish;
 	private boolean atStart;
+	private boolean recomputed;
 
 	private int speed;
 	private int tileSize;
@@ -39,6 +40,7 @@ public class Car {
 	private int finishRow;
 	private int finishX;
 	private int finishY;
+	private int carIndex;
 	
 	private final static float[] VECTOR_NOT_FOUND = {0,0,0,0};
 
@@ -51,13 +53,14 @@ public class Car {
 
 	public Car(NavServices svc, int tileSize, String map, String color, int startLocationIndex, int speed) { 
 
-		this.color = color;
-		this.map = map;
 		this.name = color;
-		this.speed = speed;
 		this.tileSize = tileSize;
+		this.map = map;
+		this.color = color;
+		this.speed = speed;
+		this.carIndex = startLocationIndex;
 		
-		if (startLocationIndex % 2 == 0) {
+		if (carIndex % 2 == 0) {
 			direction = "left";
 			startCol = 31;
 			finishCol = 0;
@@ -67,8 +70,8 @@ public class Car {
 			finishCol = 31;
 		}
 		
-		startRow = (startLocationIndex * 4) + 2;
-		finishRow = ((7 - startLocationIndex) * 4) + 4;
+		startRow = (carIndex * 4) + 2;
+		finishRow = ((7 - carIndex) * 4) + 4;
 		
 		if (finishRow >= 30) {
 			finishRow = 2;
@@ -80,6 +83,7 @@ public class Car {
 		finishY = finishRow * tileSize;
 		atFinish = false;
 		atStart = true;
+		recomputed = false;
 		
 		// convert grid squares to screen X,Y
 		screenX = worldCol * tileSize;
@@ -118,7 +122,7 @@ public class Car {
 		setupCarImages();
 		
 		navSvc = svc;
-		navigationVectors = computeNavigation();
+		navigationVectors = computeInitialNavigation();
 	}
 	
 	public void update() {
@@ -143,32 +147,48 @@ public class Car {
 						// move toward nearest vector
 						direction = getDirectionOfNearestVector();
 					} else {
-					// beginning or middle of the vector? Follow it!
-						if (currentVector[0] == currentVector[2]) {
-							// up/down
-							if (currentVector[1] > currentVector[3]) {
-								direction = "up";
+					// beginning or middle of the vector?
+					// unless we're super-close to the finish, follow it!
+						if (!isCloseToFinish(3)) {
+							if (currentVector[0] == currentVector[2]) {
+								// up/down
+								if (currentVector[1] > currentVector[3]) {
+									direction = "up";
+								} else {
+									direction = "down";
+								}
+								
 							} else {
-								direction = "down";
+								// currentVector[1] == currentVector[3]
+								// left/right
+								if (currentVector[0] > currentVector[2]) {
+									direction = "left";
+								} else {
+									direction = "right";
+								}
 							}
-							
 						} else {
-							// currentVector[1] == currentVector[3]
-							// left/right
-							if (currentVector[0] > currentVector[2]) {
-								direction = "left";
-							} else {
-								direction = "right";
-							}
+							direction = getDirectionToFinish();
 						}
 					//    just keep swimming...
 					}
 				} else {
-					// not currently on a valid vector, so 
+					// not currently on a valid vector, so recompute (only once)
+					// and if we're not close to the finish, and then
 					// move toward nearest vector
-					direction = getDirectionOfNearestVector();
+					if (!recomputed && navigationVectors.size() == 0 && !isCloseToFinish(6)) {
+						recomputed = true;
+						navigationVectors = augmentNavigation();
+					}
+					
+					if (!isCloseToFinish(3)) {
+						direction = getDirectionOfNearestVector();
+					} else {
+						direction = getDirectionToFinish();
+					}
 				}
 			}
+		
 		} else {
 			atStart = false;
 		}
@@ -248,7 +268,7 @@ public class Car {
 		return image;
 	}
 	
-	private List<float[]> computeNavigation() {
+	private List<float[]> computeInitialNavigation() {
 		
 		// initial search vector
 		float[] searchVector = {startCol, startRow, finishCol, finishRow};
@@ -256,8 +276,36 @@ public class Car {
 		// initiate vector search
 		List<float[]> streets = navSvc.vectorSearch(map, searchVector);
 		
-		// process streets to console;
-		if (name.equals("blue")) {
+		// process the blue car's streets to the console;
+		//if (name.equals("blue")) {
+		if (carIndex == 5) {
+			System.out.println(carIndex);
+			System.out.print(startCol + ",");
+			System.out.print(startRow + " - ");
+			System.out.print(finishCol + ",");
+			System.out.print(finishRow);
+			System.out.println();
+			
+			for (float[] street : streets) {
+				for (float point : street) {
+					System.out.printf("%1.1f,", point);
+				}
+				System.out.println();
+			}
+		}
+		
+		return streets;
+	}
+	
+	private List<float[]> augmentNavigation() {
+		
+		// current search vector
+		float[] searchVector = {worldCol, worldRow, finishCol, finishRow};
+		List<float[]> streets = navSvc.vectorSearch(map, searchVector);
+		
+		// process the blue car's streets to the console;
+		//if (name.equals("blue")) {
+		if (carIndex == 5) {
 			System.out.print(startCol + ",");
 			System.out.print(startRow + " - ");
 			System.out.print(finishCol + ",");
@@ -281,7 +329,6 @@ public class Car {
 		int modY = screenY % tileSize;
 		
 		if (modX == 0 && modY == 0) {
-			//System.out.println("X=" + worldCol + " Y=" + worldRow);
 			return true;
 		} else {
 			return false;
@@ -323,8 +370,8 @@ public class Car {
 			// compute distance to each endpoint
 			for (float[] vector : navigationVectors) {
 				
-				double endpoint1Distance = Math.sqrt(Math.pow(vector[0]-worldCol, 2) + Math.pow(vector[1]-worldRow, 2));
-				double endpoint2Distance = Math.sqrt(Math.pow(vector[2]-worldCol, 2) + Math.pow(vector[3]-worldRow, 2));
+				double endpoint1Distance = getEuclideanDistance(vector[0], vector[1], worldCol, worldRow);
+				double endpoint2Distance = getEuclideanDistance(vector[2], vector[3], worldCol, worldRow);
 				double shortestEndpointDistance = 0;
 				float endpoint[] = new float[2];
 				
@@ -384,7 +431,7 @@ public class Car {
 		boolean atEnd = false;
 		boolean atEndpoint = false;
 		boolean firstPair = false;
-		String direction = "";
+		String direction;
 		
 		if (vector[0] == worldCol && vector[1] == worldRow) {
 			atEndpoint = true;
@@ -424,6 +471,40 @@ public class Car {
 		}
 		
 		return atEnd;
+	}
+	
+	private boolean isCloseToFinish(int range) {
+		boolean returnVal = false;
+		double distance = getEuclideanDistance(finishCol, finishRow, worldCol, worldRow);
+		if (distance < range) {
+			returnVal = true;
+		}
+		
+		return returnVal;
+	}
+	
+	private String getDirectionToFinish() {
+		float colDistance = worldCol - finishCol;
+		float rowDistance = worldRow - finishRow;
+		
+		if (colDistance == 0) {
+			if (rowDistance < 0) {
+				return "down";
+			} else {
+				return "up";
+			}
+		} else {
+			// rowDistance == 0 {
+			if (colDistance < 0) {
+				return "right";
+			} else {
+				return "left";
+			}
+		}
+	}
+	
+	private double getEuclideanDistance(float x1, float y1, float x2, float y2) {
+		return Math.sqrt(Math.pow(x1-x2, 2) + Math.pow(y1-y2, 2));
 	}
 	
 	public String getDirection() {

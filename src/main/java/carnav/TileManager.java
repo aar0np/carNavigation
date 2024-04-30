@@ -14,13 +14,12 @@ import java.util.Random;
 
 public class TileManager {
 
-	int tileSize;
-	int maxWorldCol;
-	int maxWorldRow;
+	private int tileSize;
+	private int maxWorldCol;
+	private int maxWorldRow;
 	
-	Tile[] tiles;
-	int mapTileCodes[][];
-	
+	private Tile[] tiles;
+	private int mapTileCodes[][];
 	
 	public TileManager(int tileSize, int maxWorldCol, int maxWorldRow, String map) {
 		tiles = new Tile[50];
@@ -125,5 +124,9 @@ public class TileManager {
 				worldRow++;
 			}
 		}
+	}
+	
+	public int[][] getMapTileCodes() {
+		return this.mapTileCodes;
 	}
 }

@@ -4,7 +4,7 @@ import javax.swing.JFrame;
 
 public class CarNavigation {
 	
-	private final static int NUMBER_OF_CARS = 4;
+	private final static int NUMBER_OF_CARS = 8;
 	private final static String MAP = "city_map_2";
 	
 	public static void main(String[] args) {
