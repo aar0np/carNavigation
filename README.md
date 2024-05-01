@@ -16,6 +16,7 @@ An implementation of the Java client for the Data API, using a pure vector appro
  - Environment variables
      - `ASTRA_DB_ENDPOINT`
      - `ASTRA_DB_TOKEN`
+ - Data loaded using the [carNavigationLoader](https://github.com/aar0np/carNavigationLoader).
 
 ## To build:
 
